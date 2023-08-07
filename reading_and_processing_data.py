@@ -10,31 +10,10 @@ import numpy as np
 import xarray as xr
 import pandas as pd 
 import geopandas as gpd
-from geopandas.tools import sjoin
 import matplotlib.pyplot as plt
-from matplotlib import pyplot as plt, animation
-import matplotlib.cm as cm
-import matplotlib.patches as mpatches
-import matplotlib.dates as mdates
-from matplotlib import rcParams
-from matplotlib.ticker import MultipleLocator
-from matplotlib.colors import ListedColormap
-from matplotlib.dates import DateFormatter
-import matplotlib.gridspec as gridspec
-from mpl_toolkits.basemap import Basemap
 from datetime import datetime, timedelta
-import calendar
 import pickle
-from pathlib import Path
 import os
-import fnmatch
-import netCDF4
-import sys 
-import IPython
-from IPython.display import HTML, display
-from osgeo import gdal, ogr, osr
-import pyproj
-import rasterio
 
 
 #################### Reading in GEOS-CF and TROPOMI data #####################
@@ -45,7 +24,6 @@ def GeosCF_Tropomi_Read(geoscf_files_path, tropomi_files_path):
 
     # reading in aftenoon averaged GEOS-CF data 
     # processing code in: nox_temp_correlation_data_processing.pynb
-    #geoscf_usa_path = '/projectnb/atmchem/shared/geocf_usa/'
     geoscf_usa_path = geoscf_files_path
     
     # loading no2 data in lowest gridbox
@@ -79,7 +57,6 @@ def GeosCF_Tropomi_Read(geoscf_files_path, tropomi_files_path):
     # regridding code from Kang Sun at University at Buffalo, NY
 
     # retrieving names of all regridded files in a list 
-    #filepath = '/projectnb/atmchem/shared/tropomi/tropomi_pal/conus/gridded_geoscf'
     filepath = tropomi_files_path
     tropomi_filename_list = os.listdir(filepath) 
     
@@ -117,7 +94,6 @@ def GeosCF_Tropomi_Read(geoscf_files_path, tropomi_files_path):
         
     # creating date array to attatch to tropomi array
     # extracting first date from filename 
-    #filepath = '/projectnb/atmchem/shared/tropomi/tropomi_pal/conus/gridded_geoscf'
     filepath = tropomi_files_path
     first_file_string = str(os.listdir(filepath)[0])
     date_string = first_file_string[-11:-3] # start date 
