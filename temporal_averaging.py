@@ -6,6 +6,7 @@ Created on Thu Jul 27 14:55:06 2023
 @author: rhmooers
 """
 
+import xarray as xr
 import calendar
 import matplotlib.cm as cm
 import reading_and_processing_data as read
@@ -17,62 +18,6 @@ import plotting_functions as pf
  geoscf_surf_no2_masked, geoscf_temp_masked) = read.GeosCF_Tropomi_Read(
      '/projectnb/atmchem/shared/geocf_usa/', 
      '/projectnb/atmchem/shared/tropomi/tropomi_pal/conus/gridded_geoscf')
-
-######## Tallying the number of days of data per pixel for each month ########
-
-def Days_of_Data(tropomi_dataset): 
-    
-    # creating mask for locations of NaN values in TROPOMI array 
-    # nan locations are 1, all other data locations are 0
-    tropomi_dataset_copy = tropomi_dataset.copy(deep=True)
-    tropomi_mask = tropomi_dataset_copy.notnull()
-    
-    # tallying the number of days of data per pixel for each month 
-    days_with_data_month = tropomi_mask.resample(date='M').sum()
-    # and for the whole year 
-    days_with_data_year = tropomi_mask.resample(date='Y').sum()
-    
-    return days_with_data_month, days_with_data_year
-
-# running function 
-days_with_data_month, days_with_data_year = Days_of_Data(tropomi_col_no2)
-
-############################## Plotting Data #################################
-# use spatial plotting functions from "plotting_functions.py"
-
-# individual months
-for month in range(12): 
-    monthly_data = days_with_data_month[month, :, :]
-    
-    # date for plot title 
-    date = days_with_data_month.date.values[month]
-    full_date = str(date)
-    year = full_date[0:4]
-    
-    pf.Spatial_Plotting_1ax(monthly_data, 0, 31,
-                         (r'Number of days with data in '
-                          +calendar.month_name[month+1]+', '+year), 
-                         monthly_data.lon.values, 
-                         monthly_data.lat.values, 
-                         -126, 25, -60, 53, 
-                         cm.get_cmap('Spectral_r', 30),
-                         'Number of Days')
-    
-# full year 
-
-# date for plot title 
-date = days_with_data_year.date.values[0]
-full_date = str(date)
-year = full_date[0:4]
-
-pf.Spatial_Plotting_1ax(days_with_data_year[0,:,:], 
-                     0, 365,
-                     (r'Number of days with data in '+year),  
-                     days_with_data_year.lon.values, 
-                     days_with_data_year.lat.values, 
-                     -126, 25, -60, 53, 
-                     cm.get_cmap('Spectral_r', 30),
-                     'Number of Days')
 
 
 
@@ -152,3 +97,127 @@ pf.Spatial_Plotting_2ax(tropomi_col_no2_year_ave[0,:,:],
                      r'Column NO$_2$ (molecules/m$^2$)',
                      (r'Average Column NO$_2$ in '+year),  
                      -126, 25, -60, 53)
+
+
+######## Tallying the number of days of data per pixel for each month ########
+
+def Days_of_Data(tropomi_dataset): 
+    
+    # creating mask for locations of NaN values in TROPOMI array 
+    # nan locations are 1, all other data locations are 0
+    tropomi_dataset_copy = tropomi_dataset.copy(deep=True)
+    tropomi_mask = tropomi_dataset_copy.notnull()
+    
+    # tallying the number of days of data per pixel for each month 
+    days_with_data_month = tropomi_mask.resample(date='M').sum()
+    # and for the whole year 
+    days_with_data_year = tropomi_mask.resample(date='Y').sum()
+    
+    return days_with_data_month, days_with_data_year
+
+# running function 
+days_with_data_month, days_with_data_year = Days_of_Data(tropomi_col_no2)
+
+############################## Plotting Data #################################
+# use spatial plotting functions from "plotting_functions.py"
+
+# individual months
+for month in range(12): 
+    monthly_data = days_with_data_month[month, :, :]
+    
+    # date for plot title 
+    date = days_with_data_month.date.values[month]
+    full_date = str(date)
+    year = full_date[0:4]
+    
+    pf.Spatial_Plotting_1ax(monthly_data, 0, 31,
+                         (r'Number of days with data in '
+                          +calendar.month_name[month+1]+', '+year), 
+                         monthly_data.lon.values, 
+                         monthly_data.lat.values, 
+                         -126, 25, -60, 53, 
+                         cm.get_cmap('Spectral_r', 30),
+                         'Number of Days')
+    
+# full year 
+
+# date for plot title 
+date = days_with_data_year.date.values[0]
+full_date = str(date)
+year = full_date[0:4]
+
+pf.Spatial_Plotting_1ax(days_with_data_year[0,:,:], 
+                     0, 365,
+                     (r'Number of days with data in '+year),  
+                     days_with_data_year.lon.values, 
+                     days_with_data_year.lat.values, 
+                     -126, 25, -60, 53, 
+                     cm.get_cmap('Spectral_r', 30),
+                     'Number of Days')
+
+
+
+############# Masking gridboxes with <15 days of data in a month #############
+
+# gridboxes with sparse data may be noisy or biased 
+# masking, new data has names with "_gr15"
+
+def Masking_by_Days(tropomi_col_no2, tropomi_col_no2_month_ave, 
+                    geoscf_col_no2_month_ave, geoscf_surf_no2_month_ave, 
+                    geoscf_temp_month_ave):  
+    
+    tropomi_col_no2_copy = tropomi_col_no2.copy(deep=True)
+    tropomi_mask = tropomi_col_no2_copy.notnull()
+    days_with_data = tropomi_mask.resample(date='M').sum()
+    days_with_data_copy = days_with_data.copy(
+        deep=True)
+    days_with_data_nan = days_with_data_copy.where(
+        days_with_data_copy > 15)
+    day_number_mask = days_with_data_nan.notnull() 
+    
+    tropomi_col_no2_gr15 = xr.where(day_number_mask == True,
+                                    tropomi_col_no2_month_ave, 
+                                    days_with_data_nan)
+    geoscf_col_no2_gr15 = xr.where(day_number_mask == True, 
+                                   geoscf_col_no2_month_ave, 
+                                   days_with_data_nan)
+    geoscf_surf_no2_gr15 = xr.where(day_number_mask == True, 
+                                    geoscf_surf_no2_month_ave,
+                                    days_with_data_nan)
+    geoscf_temp_gr15 = xr.where(day_number_mask == True, 
+                                geoscf_col_no2_month_ave, 
+                                days_with_data_nan)
+    
+    return (tropomi_col_no2_gr15, geoscf_col_no2_gr15, geoscf_surf_no2_gr15, 
+            geoscf_temp_gr15)
+
+# testing function 
+(tropomi_col_no2_gr15, geoscf_col_no2_gr15, geoscf_surf_no2_gr15, 
+ geoscf_temp_gr_15) = Masking_by_Days(tropomi_col_no2, 
+                                      tropomi_col_no2_month_ave, 
+                                      geoscf_col_no2_month_ave, 
+                                      geoscf_surf_no2_month_ave, 
+                                      geoscf_temp_month_ave)
+
+# plotting monthly average column NO2 with mask
+for month in range(12):
+    # date for plot title 
+    date = tropomi_col_no2_month_ave.date.values[month]
+    full_date = str(date)
+    year = full_date[0:4]
+    
+    pf.Spatial_Plotting_2ax(tropomi_col_no2_gr15[month,:,:], 
+                            'TROPOMI', 0, 2.5e16, 
+                             tropomi_col_no2_gr15.lon.values, 
+                             tropomi_col_no2_gr15.lat.values,
+                             cm.get_cmap('Spectral_r', 30),
+                             r'Column NO$_2$ (molecules/m$^2$)', 
+                             geoscf_col_no2_gr15[month,:,:], 
+                             'GEOS-CF', 0, 2.5e16, 
+                             geoscf_col_no2_gr15.lon.values, 
+                             geoscf_col_no2_gr15.lat.values,
+                             cm.get_cmap('Spectral_r', 30),
+                             r'Column NO$_2$ (molecules/m$^2$)', 
+                             (r'Monthly Average Column NO$_2$ in ' 
+                             +calendar.month_name[month+1]+', '+year),
+                             -126, 25, -60, 53)
